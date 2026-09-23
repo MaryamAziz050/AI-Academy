@@ -26,7 +26,7 @@ const WHATSAPP_LINK = "https://wa.me/923232273307";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "n8n Automation Course for Girls | Marium AI Academy" },
+      { title: "Marium AI Academy" },
       {
         name: "description",
         content: "Learn n8n automation in 2 months through live, one-on-one online classes for girls. Beginner-friendly, project-based and certificate included.",
@@ -103,27 +103,43 @@ function RegistrationForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sent, setSent] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const nextErrors: { name?: string; email?: string; phone?: string } = {};
-    if (name.trim().length < 2) nextErrors.name = "Please enter your full name.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) nextErrors.email = "Please enter a valid email address.";
-    if (!/^[+\d][\d\s-]{7,15}$/.test(phone.trim())) nextErrors.phone = "Please enter a valid WhatsApp number.";
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  const nextErrors: { name?: string; email?: string; phone?: string } = {};
+  if (name.trim().length < 2) nextErrors.name = "Please enter your full name.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) nextErrors.email = "Please enter a valid email address.";
+  if (!/^[+\d][\d\s-]{7,15}$/.test(phone.trim())) nextErrors.phone = "Please enter a valid WhatsApp number.";
+  setErrors(nextErrors);
+  if (Object.keys(nextErrors).length > 0) return;
 
-    const text = [
-      "n8n Course Registration — Marium AI Academy",
-      `Name: ${name.trim()}`,
-      `Email: ${email.trim()}`,
-      `WhatsApp: ${phone.trim()}`,
-      `Experience level: ${level}`,
-      message.trim() ? `Questions: ${message.trim()}` : null,
-    ].filter(Boolean).join("\n");
+  const formData = {
+    name: name.trim(),
+    email: email.trim(),
+    phone: phone.trim(),
+    level,
+    message: message.trim(),
+  };
 
-    window.open(`https://wa.me/923232273307?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-    setSent(true);
-  }
+  const text = [
+    "Marium AI Academy",
+    `Name: ${formData.name}`,
+    `Email: ${formData.email}`,
+    `WhatsApp: ${formData.phone}`,
+    `Experience level: ${formData.level}`,
+    formData.message ? `Questions: ${formData.message}` : null,
+  ].filter(Boolean).join("\n");
+
+  // Open WhatsApp FIRST — right inside the click event, so popup blocker allows it
+  window.open(`https://wa.me/923232273307?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  setSent(true);
+
+  // Send to Google Sheet AFTER — don't block/await, runs in background
+  fetch(import.meta.env["VITE_SHEET_WEBHOOK_URL"], {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(formData),
+  }).catch((err) => console.error("Sheet submission failed:", err));
+}
 
   return (
     <form onSubmit={handleSubmit} noValidate className="relative z-10" aria-label="n8n course registration form">
